@@ -1,11 +1,12 @@
 {
-  "name": "ukbankholidays",
+  "name": "ukpublicholidays",
   "type": "module",
   "version": "0.0.1",
   "engines": {
     "node": ">=22.12.0"
   },
   "scripts": {
+    "test": "node --experimental-strip-types --test src/lib/holidays.test.ts",
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
