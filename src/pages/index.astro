@@ -1,565 +1,826 @@
 ---
-import { buildHolidays, territoryOrder, type Proclamations, type Territory } from '../lib/holidays';
+import {
+  buildHolidays,
+  territoryOrder,
+  type Proclamations,
+  type Territory,
+} from "../lib/holidays";
 
-const PROCLAIMED_URL = 'https://d7rpp5pzwp0ap.cloudfront.net/proclaimed_bhs.json';
-const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/`;
-const PROCLAIMED_NOT_URL = 'https://d7rpp5pzwp0ap.cloudfront.net/proclaimed_not_bhs.json';
+const PROCLAIMED_URL =
+  "https://d7rpp5pzwp0ap.cloudfront.net/proclaimed_bhs.json";
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/`;
+const PROCLAIMED_NOT_URL =
+  "https://d7rpp5pzwp0ap.cloudfront.net/proclaimed_not_bhs.json";
 const shortNames: Record<Territory, string> = {
-	'England and Wales': 'England & Wales',
-	Scotland: 'Scotland',
-	'Northern Ireland': 'N. Ireland',
+  "England and Wales": "England & Wales",
+  Scotland: "Scotland",
+  "Northern Ireland": "N. Ireland",
 };
 const territoryCodes: Record<Territory, string> = {
-	'England and Wales': 'EW',
-	Scotland: 'SC',
-	'Northern Ireland': 'NI',
+  "England and Wales": "EW",
+  Scotland: "SC",
+  "Northern Ireland": "NI",
 };
 
 const [proclaimedResponse, proclaimedNotResponse] = await Promise.all([
-	fetch(PROCLAIMED_URL),
-	fetch(PROCLAIMED_NOT_URL),
+  fetch(PROCLAIMED_URL),
+  fetch(PROCLAIMED_NOT_URL),
 ]);
 if (!proclaimedResponse.ok) {
-	throw new Error(`Could not load proclaimed bank holidays (${proclaimedResponse.status})`);
+  throw new Error(
+    `Could not load proclaimed bank holidays (${proclaimedResponse.status})`,
+  );
 }
 if (!proclaimedNotResponse.ok) {
-	throw new Error(`Could not load bank holiday exclusions (${proclaimedNotResponse.status})`);
+  throw new Error(
+    `Could not load bank holiday exclusions (${proclaimedNotResponse.status})`,
+  );
 }
 const holidays = buildHolidays(
-	(await proclaimedResponse.json()) as Proclamations,
-	(await proclaimedNotResponse.json()) as Proclamations,
+  (await proclaimedResponse.json()) as Proclamations,
+  (await proclaimedNotResponse.json()) as Proclamations,
 );
 
 const formatDate = (date: string) =>
-	new Intl.DateTimeFormat('en-GB', {
-		weekday: 'long',
-		day: 'numeric',
-		month: 'long',
-		year: 'numeric',
-		timeZone: 'UTC',
-	}).format(new Date(`${date}T00:00:00Z`));
+  new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T00:00:00Z`));
 ---
 
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="description" content="Proclaimed, statutory and common law public holidays across the United Kingdom." />
-		<title>UK public holidays</title>
-	</head>
-	<body>
-		<header class="masthead">
-			<div class="brand">
-				<a href={base} aria-label="UK Public Holidays home">
-					<span>UK Public Holidays</span>
-				</a>
-			</div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Proclaimed, statutory and common law public holidays across the United Kingdom."
+    />
+    <title>UK public holidays</title>
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="brand">
+        <a href={base} aria-label="UK Public Holidays home">
+          <span>UK Public Holidays</span>
+        </a>
+      </div>
 
-			<div class="filter-wrap">
-				<p id="filter-label">Show holidays in</p>
-				<nav class="filters" aria-labelledby="filter-label">
-					<button class="filter active" type="button" data-territory="all" aria-pressed="true">
-						All territories
-					</button>
-					{territoryOrder.map((territory) => (
-						<button class="filter" type="button" data-territory={territory} aria-pressed="false">
-							<span class={`mini-dot ${territoryCodes[territory].toLowerCase()}`} aria-hidden="true"></span>
-							{territory}
-						</button>
-					))}
-				</nav>
-			</div>
-		</header>
+      <div class="filter-wrap">
+        <p id="filter-label">Show holidays in</p>
+        <nav class="filters" aria-labelledby="filter-label">
+          <button
+            class="filter active"
+            type="button"
+            data-territory="all"
+            aria-pressed="true"
+          >
+            All territories
+          </button>
+          {
+            territoryOrder.map((territory) => (
+              <button
+                class="filter"
+                type="button"
+                data-territory={territory}
+                aria-pressed="false"
+              >
+                <span
+                  class={`mini-dot ${territoryCodes[territory].toLowerCase()}`}
+                  aria-hidden="true"
+                />
+                {territory}
+              </button>
+            ))
+          }
+        </nav>
+      </div>
+    </header>
 
-		<main>
-			<section class="timeline" aria-label="UK public holidays">
-		<aside class="overview" aria-label="Timeline overview">
-			<p>All dates</p>
-			<div class="overview-track">
-				<span class="overview-year overview-year-start">{holidays[0].date.slice(0, 4)}</span>
-				<div class="overview-dates">
-					{holidays.map((holiday) => (
-						<button
-							class="overview-date"
-							type="button"
-							data-overview-date={holiday.date}
-							data-territories={holiday.territories.join('|')}
-							aria-label={`Go to ${formatDate(holiday.date)}`}
-						></button>
-					))}
-					<div class="scroll-marker" aria-hidden="true">
-						<span></span>
-					</div>
-				</div>
-				<span class="overview-year overview-year-end">{holidays.at(-1)?.date.slice(0, 4)}</span>
-			</div>
-		</aside>
-				<p class="empty" hidden>No holidays match this territory.</p>
-				<ul class="holiday-list">
-					{holidays.map((holiday) => (
-						<li
-							class="holiday"
-							data-date={holiday.date}
-							data-territories={holiday.territories.join('|')}
-						>
-							<div class="holiday-card">
-								<div class="date-copy">
-									<h2>{formatDate(holiday.date)}</h2>
-								</div>
-								<div class="holiday-meta">
-									<div class="territories" aria-label={`Public holiday in ${holiday.territories.join(', ')}`}>
-										{holiday.territories.map((territory) => (
-											<span class={`territory ${territoryCodes[territory].toLowerCase()}`}>
-												{shortNames[territory]}
-											</span>
-										))}
-									</div>
-									<span class="holiday-help">
-										<button
-											type="button"
-											class="help-button"
-											aria-label={`Why ${formatDate(holiday.date)} is a public holiday`}
-											aria-describedby={`holiday-help-${holiday.date}`}
-										>?</button>
-										<span class="help-tooltip" id={`holiday-help-${holiday.date}`} role="tooltip">
-											{holiday.territories.map((territory) => (
-												<span class="help-reason">
-													<strong>{shortNames[territory]}</strong>
-													<span>{holiday.reasonsByTerritory[territory]?.join('; ')}</span>
-													{holiday.proclamationsByTerritory[territory]?.length ? (
-														<span class="proclamation-links">
-															{holiday.proclamationsByTerritory[territory]?.map((notice) => (
-																<a
-																	href={notice}
-																	target="_blank"
-																	rel="noreferrer"
-																	title={`Gazette notice ${notice.split('/').at(-1)}`}
-																>
-																	{notice.split('/').at(-1)}
-																</a>
-															))}
-														</span>
-													) : null}
-												</span>
-											))}
-										</span>
-									</span>
-								</div>
+    <main>
+      <section class="timeline" aria-label="UK public holidays">
+        <aside class="overview" aria-label="Timeline overview">
+          <p>All dates</p>
+          <div class="overview-track">
+            <span class="overview-year overview-year-start"
+              >{holidays[0].date.slice(0, 4)}</span
+            >
+            <div class="overview-dates">
+              {
+                holidays.map((holiday) => (
+                  <button
+                    class="overview-date"
+                    type="button"
+                    data-overview-date={holiday.date}
+                    data-territories={holiday.territories.join("|")}
+                    aria-label={`Go to ${formatDate(holiday.date)}`}
+                  />
+                ))
+              }
+              <div class="scroll-marker" aria-hidden="true">
+                <span></span>
+              </div>
+            </div>
+            <span class="overview-year overview-year-end"
+              >{holidays.at(-1)?.date.slice(0, 4)}</span
+            >
+          </div>
+        </aside>
+        <p class="empty" hidden>No holidays match this territory.</p>
+        <ul class="holiday-list">
+          {
+            holidays.map((holiday) => (
+              <li
+                class="holiday"
+                data-date={holiday.date}
+                data-territories={holiday.territories.join("|")}
+              >
+                <div class="holiday-card">
+                  <div class="date-copy">
+                    <h2>{formatDate(holiday.date)}</h2>
+                  </div>
+                  <div class="holiday-meta">
+                    <div
+                      class="territories"
+                      aria-label={`Public holiday in ${holiday.territories.join(", ")}`}
+                    >
+                      {holiday.territories.map((territory) => (
+                        <span
+                          class={`territory ${territoryCodes[territory].toLowerCase()}`}
+                        >
+                          {shortNames[territory]}
+                        </span>
+                      ))}
+                    </div>
+                    <span class="holiday-help">
+                      <button
+                        type="button"
+                        class="help-button"
+                        aria-label={`Why ${formatDate(holiday.date)} is a public holiday`}
+                        aria-describedby={`holiday-help-${holiday.date}`}
+                      >
+                        ?
+                      </button>
+                      <span
+                        class="help-tooltip"
+                        id={`holiday-help-${holiday.date}`}
+                        role="tooltip"
+                      >
+                        {holiday.territories.map((territory) => (
+                          <span class="help-reason">
+                            <strong>{shortNames[territory]}</strong>
+                            <span>
+                              {holiday.reasonsByTerritory[territory]?.join(
+                                "; ",
+                              )}
+                            </span>
+                            {holiday.proclamationsByTerritory[territory]
+                              ?.length ? (
+                              <span class="proclamation-links">
+                                {holiday.proclamationsByTerritory[
+                                  territory
+                                ]?.map((notice) => (
+                                  <a
+                                    href={notice}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title={`Gazette notice ${notice.split("/").at(-1)}`}
+                                  >
+                                    {notice.split("/").at(-1)}
+                                  </a>
+                                ))}
+                              </span>
+                            ) : null}
+                          </span>
+                        ))}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+    </main>
 
-							</div>
-						</li>
-					))}
-				</ul>
-			</section>
-		</main>
+    <script>
+      const buttons = [
+        ...document.querySelectorAll<HTMLButtonElement>(".filter"),
+      ];
+      const holidays = [...document.querySelectorAll<HTMLElement>(".holiday")];
+      const overviewDates = [
+        ...document.querySelectorAll<HTMLButtonElement>(".overview-date"),
+      ];
+      const marker = document.querySelector<HTMLElement>(".scroll-marker");
+      const markerLabel = marker?.querySelector<HTMLElement>("span");
+      const empty = document.querySelector<HTMLElement>(".empty");
+      const today = new Date().toISOString().slice(0, 10);
+      let markerFrame = 0;
 
+      const visibleHolidays = () =>
+        holidays.filter((holiday) => !holiday.hidden);
 
-		<script>
-			const buttons = [...document.querySelectorAll<HTMLButtonElement>('.filter')];
-			const holidays = [...document.querySelectorAll<HTMLElement>('.holiday')];
-			const overviewDates = [...document.querySelectorAll<HTMLButtonElement>('.overview-date')];
-			const marker = document.querySelector<HTMLElement>('.scroll-marker');
-			const markerLabel = marker?.querySelector<HTMLElement>('span');
-			const empty = document.querySelector<HTMLElement>('.empty');
-			const today = new Date().toISOString().slice(0, 10);
-			let markerFrame = 0;
+      const updateMarker = () => {
+        markerFrame = 0;
+        const visible = visibleHolidays();
+        if (!visible.length || !marker) return;
 
-			const visibleHolidays = () => holidays.filter((holiday) => !holiday.hidden);
+        const headerBottom =
+          document.querySelector(".masthead")?.getBoundingClientRect().bottom ??
+          0;
+        const current =
+          [...visible]
+            .reverse()
+            .find(
+              (holiday) =>
+                holiday.getBoundingClientRect().top <= headerBottom + 16,
+            ) ?? visible[0];
+        const index = visible.indexOf(current);
+        const progress =
+          visible.length === 1 ? 0 : index / (visible.length - 1);
+        marker.style.top = `${progress * 100}%`;
+        if (markerLabel)
+          markerLabel.textContent = current.dataset.date?.slice(0, 4) ?? "";
+        overviewDates.forEach((date) => {
+          date.classList.toggle(
+            "current",
+            date.dataset.overviewDate === current.dataset.date,
+          );
+        });
+      };
 
-			const updateMarker = () => {
-				markerFrame = 0;
-				const visible = visibleHolidays();
-				if (!visible.length || !marker) return;
+      const queueMarkerUpdate = () => {
+        if (!markerFrame) markerFrame = requestAnimationFrame(updateMarker);
+      };
 
-				const headerBottom = document.querySelector('.masthead')?.getBoundingClientRect().bottom ?? 0;
-				const current =
-					[...visible].reverse().find((holiday) => holiday.getBoundingClientRect().top <= headerBottom + 16) ??
-					visible[0];
-				const index = visible.indexOf(current);
-				const progress = visible.length === 1 ? 0 : index / (visible.length - 1);
-				marker.style.top = `${progress * 100}%`;
-				if (markerLabel) markerLabel.textContent = current.dataset.date?.slice(0, 4) ?? '';
-				overviewDates.forEach((date) => {
-					date.classList.toggle('current', date.dataset.overviewDate === current.dataset.date);
-				});
-			};
+      const layoutOverview = (territory: string) => {
+        const visible = overviewDates.filter((date) => {
+          date.hidden =
+            territory !== "all" &&
+            !(date.dataset.territories ?? "").split("|").includes(territory);
+          return !date.hidden;
+        });
+        visible.forEach((date, index) => {
+          const progress =
+            visible.length === 1 ? 0 : index / (visible.length - 1);
+          date.style.top = `${progress * 100}%`;
+        });
+      };
 
-			const queueMarkerUpdate = () => {
-				if (!markerFrame) markerFrame = requestAnimationFrame(updateMarker);
-			};
+      const positionAtUpcoming = () => {
+        const visible = visibleHolidays();
+        const next =
+          visible.find((holiday) => (holiday.dataset.date ?? "") >= today) ??
+          visible.at(-1);
+        next?.scrollIntoView({ block: "start" });
+        requestAnimationFrame(updateMarker);
+      };
 
-			const layoutOverview = (territory: string) => {
-				const visible = overviewDates.filter((date) => {
-					date.hidden =
-						territory !== 'all' && !(date.dataset.territories ?? '').split('|').includes(territory);
-					return !date.hidden;
-				});
-				visible.forEach((date, index) => {
-					const progress = visible.length === 1 ? 0 : index / (visible.length - 1);
-					date.style.top = `${progress * 100}%`;
-				});
-			};
+      const filterHolidays = (territory: string) => {
+        buttons.forEach((button) => {
+          const selected = button.dataset.territory === territory;
+          button.classList.toggle("active", selected);
+          button.setAttribute("aria-pressed", String(selected));
+        });
+        holidays.forEach((holiday) => {
+          holiday.hidden =
+            territory !== "all" &&
+            !(holiday.dataset.territories ?? "").split("|").includes(territory);
+        });
+        layoutOverview(territory);
+        if (empty) empty.hidden = holidays.some((holiday) => !holiday.hidden);
+        history.replaceState(
+          null,
+          "",
+          territory === "all"
+            ? location.pathname
+            : `#${encodeURIComponent(territory)}`,
+        );
+        requestAnimationFrame(positionAtUpcoming);
+      };
 
-			const positionAtUpcoming = () => {
-				const visible = visibleHolidays();
-				const next = visible.find((holiday) => (holiday.dataset.date ?? '') >= today) ?? visible.at(-1);
-				next?.scrollIntoView({ block: 'start' });
-				requestAnimationFrame(updateMarker);
-			};
+      buttons.forEach((button) => {
+        button.addEventListener("click", () =>
+          filterHolidays(button.dataset.territory ?? "all"),
+        );
+      });
+      overviewDates.forEach((date) => {
+        date.addEventListener("click", () => {
+          holidays
+            .find(
+              (holiday) => holiday.dataset.date === date.dataset.overviewDate,
+            )
+            ?.scrollIntoView({
+              block: "start",
+            });
+        });
+      });
+      addEventListener("scroll", queueMarkerUpdate, { passive: true });
+      addEventListener("resize", queueMarkerUpdate);
 
-			const filterHolidays = (territory: string) => {
-				buttons.forEach((button) => {
-					const selected = button.dataset.territory === territory;
-					button.classList.toggle('active', selected);
-					button.setAttribute('aria-pressed', String(selected));
-				});
-				holidays.forEach((holiday) => {
-					holiday.hidden =
-						territory !== 'all' && !(holiday.dataset.territories ?? '').split('|').includes(territory);
-				});
-				layoutOverview(territory);
-				if (empty) empty.hidden = holidays.some((holiday) => !holiday.hidden);
-				history.replaceState(null, '', territory === 'all' ? location.pathname : `#${encodeURIComponent(territory)}`);
-				requestAnimationFrame(positionAtUpcoming);
-			};
-
-			buttons.forEach((button) => {
-				button.addEventListener('click', () => filterHolidays(button.dataset.territory ?? 'all'));
-			});
-			overviewDates.forEach((date) => {
-				date.addEventListener('click', () => {
-					holidays.find((holiday) => holiday.dataset.date === date.dataset.overviewDate)?.scrollIntoView({
-						block: 'start',
-					});
-				});
-			});
-			addEventListener('scroll', queueMarkerUpdate, { passive: true });
-			addEventListener('resize', queueMarkerUpdate);
-
-			const requestedTerritory = decodeURIComponent(location.hash.slice(1));
-			const initialTerritory = buttons.some((button) => button.dataset.territory === requestedTerritory)
-				? requestedTerritory
-				: 'all';
-			document.fonts.ready.then(() => requestAnimationFrame(() => filterHolidays(initialTerritory)));
-		</script>
-	</body>
+      const requestedTerritory = decodeURIComponent(location.hash.slice(1));
+      const initialTerritory = buttons.some(
+        (button) => button.dataset.territory === requestedTerritory,
+      )
+        ? requestedTerritory
+        : "all";
+      document.fonts.ready.then(() =>
+        requestAnimationFrame(() => filterHolidays(initialTerritory)),
+      );
+    </script>
+  </body>
 </html>
 
 <style is:global>
-	@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600display=swap');
+  @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600display=swap");
 
-	:root {
-		--ink: #17211b;
-		--paper: #f4f1e9;
-		--card: #fbfaf6;
-		--line: #cbc8bc;
-		--muted: #697069;
-		--green: #275d43;
-		--ew: #d45f3f;
-		--sc: #4d6e9f;
-		--ni: #b48b24;
-		font-family: 'DM Sans', sans-serif;
-		color: var(--ink);
-		background: var(--paper);
-	}
+  :root {
+    --ink: #17211b;
+    --paper: #f4f1e9;
+    --card: #fbfaf6;
+    --line: #cbc8bc;
+    --muted: #697069;
+    --green: #275d43;
+    --ew: #d45f3f;
+    --sc: #4d6e9f;
+    --ni: #b48b24;
+    font-family: "DM Sans", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+  }
 
-	* { box-sizing: border-box; }
-	html { overflow-anchor: none; scroll-behavior: auto; }
-	body { margin: 0; min-width: 320px; background: var(--paper); }
-	a { color: inherit; }
-	button { font: inherit; }
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    overflow-anchor: none;
+    scroll-behavior: auto;
+  }
+  body {
+    margin: 0;
+    min-width: 320px;
+    background: var(--paper);
+  }
+  a {
+    color: inherit;
+  }
+  button {
+    font: inherit;
+  }
 
-	.masthead {
-		position: sticky;
-		top: 0;
-		z-index: 10;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 2rem;
-		min-height: 116px;
-		padding: 1.2rem clamp(1.25rem, 4vw, 4.5rem);
-		border-bottom: 1px solid rgba(39, 93, 67, .22);
-		background: rgba(244, 241, 233, .94);
-		backdrop-filter: blur(14px);
-	}
+  .masthead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    min-height: 116px;
+    padding: 1.2rem clamp(1.25rem, 4vw, 4.5rem);
+    border-bottom: 1px solid rgba(39, 93, 67, 0.22);
+    background: rgba(244, 241, 233, 0.94);
+    backdrop-filter: blur(14px);
+  }
 
-	.brand a {
-		display: flex;
-		align-items: center;
-		gap: .75rem;
-		font-family: 'DM Sans', sans-serif;
-		font-size: 1.5rem;
-		font-weight: 600;
-		text-decoration: none;
-	}
+  .brand a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: "DM Sans", sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
 
-	.filter-wrap > p {
-		margin: 0 0 .55rem;
-		color: var(--muted);
-		font-size: .68rem;
-		font-weight: 600;
-		letter-spacing: .11em;
-		text-transform: uppercase;
-	}
+  .filter-wrap > p {
+    margin: 0 0 0.55rem;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+  }
 
-	.filters { display: flex; flex-wrap: wrap; gap: .45rem; }
-	.filter {
-		display: inline-flex;
-		align-items: center;
-		gap: .45rem;
-		padding: .58rem .85rem;
-		border: 1px solid #c5c7be;
-		border-radius: 999px;
-		color: #4c554e;
-		background: transparent;
-		font-size: .76rem;
-		font-weight: 600;
-		cursor: pointer;
-		transition: color .2s, background .2s, border-color .2s;
-	}
-	.filter:hover { border-color: var(--green); color: var(--green); }
-	.filter.active { border-color: var(--green); color: white; background: var(--green); }
-	.mini-dot, i, .territory i {
-		display: inline-block;
-		width: .5rem;
-		height: .5rem;
-		border-radius: 50%;
-		background: currentColor;
-	}
-	.ew { color: var(--ew); }
-	.sc { color: var(--sc); }
-	.ni { color: var(--ni); }
-	.filter.active .mini-dot { color: white; }
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.58rem 0.85rem;
+    border: 1px solid #c5c7be;
+    border-radius: 999px;
+    color: #4c554e;
+    background: transparent;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      color 0.2s,
+      background 0.2s,
+      border-color 0.2s;
+  }
+  .filter:hover {
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .filter.active {
+    border-color: var(--green);
+    color: white;
+    background: var(--green);
+  }
+  .mini-dot,
+  i,
+  .territory i {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .ew {
+    color: var(--ew);
+  }
+  .sc {
+    color: var(--sc);
+  }
+  .ni {
+    color: var(--ni);
+  }
+  .filter.active .mini-dot {
+    color: white;
+  }
 
-	main {
-		width: min(1120px, calc(100% - 2.5rem));
-		margin: 0 auto;
-	}
+  main {
+    width: min(1120px, calc(100% - 2.5rem));
+    margin: 0 auto;
+  }
 
-	h1 {
-		margin: 0;
-		font-family: 'DM Sans', sans-serif;
-		font-size: clamp(3.8rem, 8vw, 7.6rem);
-		font-weight: 500;
-		letter-spacing: -.055em;
-		line-height: .88;
-	}
+  h1 {
+    margin: 0;
+    font-family: "DM Sans", sans-serif;
+    font-size: clamp(3.8rem, 8vw, 7.6rem);
+    font-weight: 500;
+    letter-spacing: -0.055em;
+    line-height: 0.88;
+  }
 
-	.timeline {
-		position: relative;
-		display: grid;
-		grid-template-columns: 4.5rem minmax(0, 1fr);
-		gap: 1.75rem;
-		width: min(820px, 100%);
-		margin: 0 auto;
-	}
-	.holiday-list {
-		grid-column: 2;
-		margin: 0;
-		padding: 0;
-		overflow-anchor: none;
-		list-style: none;
-	}
-	.holiday {
-		position: relative;
-		margin-bottom: 1rem;
-		scroll-margin-top: 132px;
-	}
-	.holiday[hidden] { display: none; }
-	.holiday-card {
-		display: grid;
-		grid-template-columns: max-content auto;
-		gap: 1.15rem;
-		padding: 1.4rem 1.5rem 1.1rem;
-		border: 1px solid #d7d4ca;
-		border-radius: 3px;
-		background: var(--card);
-		box-shadow: 0 5px 18px rgba(23, 33, 27, .035);
-	}
-	.holiday h2 { margin: 0; font-family: 'DM Sans', sans-serif; font-size: clamp(1.35rem, 2.5vw, 1.75rem); font-weight: 500; line-height: 1.1; }
-	.holiday-meta { display: flex; align-items: flex-start; justify-content: flex-end; gap: .5rem; }
-	.territories { display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: flex-end; gap: .35rem; max-width: none; }
-	.territory {
-		display: inline-flex;
-		align-items: center;
-		gap: .35rem;
-		padding: .35rem .5rem;
-		border: 1px solid currentColor;
-		border-radius: 2px;
-		font-size: .64rem;
-		font-weight: 600;
-		white-space: nowrap;
-	}
-	.territory i { width: .38rem; height: .38rem; }
-	.holiday-help { position: relative; flex: 0 0 auto; }
-	.help-button {
-		display: grid;
-		width: 1.55rem;
-		height: 1.55rem;
-		padding: 0;
-		place-items: center;
-		border: 1px solid var(--muted);
-		border-radius: 50%;
-		color: var(--muted);
-		background: transparent;
-		font: 600 .72rem/1 'DM Sans', sans-serif;
-		cursor: help;
-	}
-	.help-button:hover, .help-button:focus-visible { border-color: var(--green); color: var(--green); outline: none; }
-	.help-tooltip {
-		position: absolute;
-		z-index: 20;
-		top: calc(100% + .55rem);
-		right: 0;
-		display: none;
-		width: min(22rem, calc(100vw - 3rem));
-		padding: .8rem .9rem;
-		border: 1px solid #c8c6bd;
-		border-radius: 3px;
-		color: var(--ink);
-		background: var(--card);
-		box-shadow: 0 8px 24px rgba(23, 33, 27, .14);
-		font-size: .72rem;
-		line-height: 1.4;
-	}
-	.holiday-help:hover .help-tooltip, .holiday-help:focus-within .help-tooltip { display: grid; gap: .65rem; }
-	.help-reason { display: grid; gap: .08rem; }
-	.help-reason strong { font-size: .68rem; }
-	.help-reason > span { color: var(--muted); }
-	.proclamation-links { display: flex; flex-wrap: wrap; gap: .25rem .6rem; margin-top: .1rem; }
-	.proclamation-links a { color: var(--green); font-weight: 600; text-underline-offset: 2px; }
-	.empty { grid-column: 2; padding: 4rem 0; color: var(--muted); text-align: center; }
-	.empty[hidden] { display: none; }
+  .timeline {
+    position: relative;
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: 1.75rem;
+    width: min(820px, 100%);
+    margin: 0 auto;
+  }
+  .holiday-list {
+    grid-column: 2;
+    margin: 0;
+    padding: 0;
+    overflow-anchor: none;
+    list-style: none;
+  }
+  .holiday {
+    position: relative;
+    margin-bottom: 1rem;
+    scroll-margin-top: 132px;
+  }
+  .holiday[hidden] {
+    display: none;
+  }
+  .holiday-card {
+    display: grid;
+    grid-template-columns: max-content auto;
+    gap: 1.15rem;
+    padding: 1.4rem 1.5rem 1.1rem;
+    border: 1px solid #d7d4ca;
+    border-radius: 3px;
+    background: var(--card);
+    box-shadow: 0 5px 18px rgba(23, 33, 27, 0.035);
+  }
+  .holiday h2 {
+    margin: 0;
+    font-family: "DM Sans", sans-serif;
+    font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+    font-weight: 500;
+    line-height: 1.1;
+  }
+  .holiday-meta {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .territories {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    max-width: none;
+  }
+  .territory {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    font-size: 0.64rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .territory i {
+    width: 0.38rem;
+    height: 0.38rem;
+  }
+  .holiday-help {
+    position: relative;
+    flex: 0 0 auto;
+  }
+  .help-button {
+    display: grid;
+    width: 1.55rem;
+    height: 1.55rem;
+    padding: 0;
+    place-items: center;
+    border: 1px solid var(--muted);
+    border-radius: 50%;
+    color: var(--muted);
+    background: transparent;
+    font:
+      600 0.72rem/1 "DM Sans",
+      sans-serif;
+    cursor: help;
+  }
+  .help-button:hover,
+  .help-button:focus-visible {
+    border-color: var(--green);
+    color: var(--green);
+    outline: none;
+  }
+  .help-tooltip {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 0.55rem);
+    right: 0;
+    display: none;
+    width: min(22rem, calc(100vw - 3rem));
+    padding: 0.8rem 0.9rem;
+    border: 1px solid #c8c6bd;
+    border-radius: 3px;
+    color: var(--ink);
+    background: var(--card);
+    box-shadow: 0 8px 24px rgba(23, 33, 27, 0.14);
+    font-size: 0.72rem;
+    line-height: 1.4;
+  }
+  .holiday-help:hover .help-tooltip,
+  .holiday-help:focus-within .help-tooltip {
+    display: grid;
+    gap: 0.65rem;
+  }
+  .help-reason {
+    display: grid;
+    gap: 0.08rem;
+  }
+  .help-reason strong {
+    font-size: 0.68rem;
+  }
+  .help-reason > span {
+    color: var(--muted);
+  }
+  .proclamation-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.6rem;
+    margin-top: 0.1rem;
+  }
+  .proclamation-links a {
+    color: var(--green);
+    font-weight: 600;
+    text-underline-offset: 2px;
+  }
+  .empty {
+    grid-column: 2;
+    padding: 4rem 0;
+    color: var(--muted);
+    text-align: center;
+  }
+  .empty[hidden] {
+    display: none;
+  }
 
-	.overview {
-		position: sticky;
-		z-index: 8;
-		top: 132px;
-		display: flex;
-		width: 4.5rem;
-		height: calc(100vh - 164px);
-		flex-direction: column;
-		align-self: start;
-		color: var(--muted);
-	}
-	.overview > p {
-		margin: 0 0 .65rem;
-		font-size: .6rem;
-		font-weight: 600;
-		letter-spacing: .12em;
-		text-align: center;
-		text-transform: uppercase;
-	}
-	.overview-track {
-		position: relative;
-		min-height: 0;
-		flex: 1;
-	}
-	.overview-dates {
-		position: absolute;
-		top: 1.1rem;
-		left: 0;
-		bottom: 1.1rem;
-		left: 0;
-		border-left: 1px solid var(--line);
-	}
-	.overview-date {
-		position: absolute;
-		left: -1px;
-		width: .65rem;
-		height: 5px;
-		padding: 0;
-		transform: translateY(-50%);
-		border: 0;
-		background: transparent;
-		cursor: pointer;
-	}
-	.overview-date::before {
-		position: absolute;
-		top: 2px;
-		left: 0;
-		width: .32rem;
-		height: 1px;
-		background: #a9ada6;
-		content: '';
-		transition: width .15s, background .15s;
-	}
-	.overview-date[hidden] { display: none; }
-	.overview-year {
-		position: absolute;
-		right: .9rem;
-		font-size: .56rem;
-		font-variant-numeric: tabular-nums;
-		letter-spacing: .04em;
-	}
-	.overview-year-start { top: 0; }
-	.overview-year-end { bottom: 0; }
-	.scroll-marker {
-		position: absolute;
-		z-index: 2;
-		top: 0;
-		left: 100%;
-		width: 1.75rem;
-		height: 2px;
-		transform: translateY(-50%);
-		background: var(--green);
-		box-shadow: 0 0 0 2px var(--paper);
-		pointer-events: none;
-		transition: top .12s linear;
-	}
-	.scroll-marker::after {
-		position: absolute;
-		top: 50%;
-		right: -3px;
-		width: 7px;
-		height: 7px;
-		transform: translateY(-50%);
-		border-radius: 50%;
-		background: var(--green);
-		content: '';
-	}
-	.scroll-marker span {
-		position: absolute;
-		top: 50%;
-		left: calc(100% + .45rem);
-		transform: translateY(-50%);
-		color: var(--green);
-		font-size: .58rem;
-		font-weight: 600;
-		font-variant-numeric: tabular-nums;
-	}
+  .overview {
+    position: sticky;
+    z-index: 8;
+    top: 132px;
+    display: flex;
+    width: 4.5rem;
+    height: calc(100vh - 164px);
+    flex-direction: column;
+    align-self: start;
+    color: var(--muted);
+  }
+  .overview > p {
+    margin: 0 0 0.65rem;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  .overview-track {
+    position: relative;
+    min-height: 0;
+    flex: 1;
+  }
+  .overview-dates {
+    position: absolute;
+    top: 1.1rem;
+    left: 0;
+    bottom: 1.1rem;
+    left: 0;
+    border-left: 1px solid var(--line);
+  }
+  .overview-date {
+    position: absolute;
+    left: -1px;
+    width: 0.65rem;
+    height: 5px;
+    padding: 0;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .overview-date::before {
+    position: absolute;
+    top: 2px;
+    left: 0;
+    width: 0.32rem;
+    height: 1px;
+    background: #a9ada6;
+    content: "";
+    transition:
+      width 0.15s,
+      background 0.15s;
+  }
+  .overview-date[hidden] {
+    display: none;
+  }
+  .overview-year {
+    position: absolute;
+    right: 0.9rem;
+    font-size: 0.56rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+  .overview-year-start {
+    top: 0;
+  }
+  .overview-year-end {
+    bottom: 0;
+  }
+  .scroll-marker {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 100%;
+    width: 1.75rem;
+    height: 2px;
+    transform: translateY(-50%);
+    background: var(--green);
+    box-shadow: 0 0 0 2px var(--paper);
+    pointer-events: none;
+    transition: top 0.12s linear;
+  }
+  .scroll-marker::after {
+    position: absolute;
+    top: 50%;
+    right: -3px;
+    width: 7px;
+    height: 7px;
+    transform: translateY(-50%);
+    border-radius: 50%;
+    background: var(--green);
+    content: "";
+  }
+  .scroll-marker span {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 0.45rem);
+    transform: translateY(-50%);
+    color: var(--green);
+    font-size: 0.58rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
 
-	@media (max-width: 800px) {
-		.masthead { align-items: flex-start; min-height: 0; padding-block: .9rem; }
-		.brand p { display: none; }
-		.filter-wrap > p { display: none; }
-		.filters { justify-content: flex-end; }
-		.filter { padding: .5rem .7rem; }
-		.filter .mini-dot { display: none; }
-		.holiday { scroll-margin-top: 112px; }
-		.overview { top: 112px; width: 2.25rem; height: calc(100vh - 128px); }
-		.overview > p { display: none; }
-		.overview-year { right: .55rem; font-size: .48rem; }
-		.scroll-marker span { right: calc(100% + .25rem); font-size: .5rem; }
-	}
+  @media (max-width: 800px) {
+    .masthead {
+      align-items: flex-start;
+      min-height: 0;
+      padding-block: 0.9rem;
+    }
+    .brand p {
+      display: none;
+    }
+    .filter-wrap > p {
+      display: none;
+    }
+    .filters {
+      justify-content: flex-end;
+    }
+    .filter {
+      padding: 0.5rem 0.7rem;
+    }
+    .filter .mini-dot {
+      display: none;
+    }
+    .holiday {
+      scroll-margin-top: 112px;
+    }
+    .overview {
+      top: 112px;
+      width: 2.25rem;
+      height: calc(100vh - 128px);
+    }
+    .overview > p {
+      display: none;
+    }
+    .overview-year {
+      right: 0.55rem;
+      font-size: 0.48rem;
+    }
+    .scroll-marker span {
+      right: calc(100% + 0.25rem);
+      font-size: 0.5rem;
+    }
+  }
 
-	@media (max-width: 580px) {
-		.masthead { display: block; }
-		.brand { margin-bottom: .85rem; }
-		.filters { justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; padding-bottom: .15rem; scrollbar-width: none; }
-		.filter { flex: 0 0 auto; font-size: .68rem; }
-		main { width: min(100% - 1.5rem, 1120px); margin: 0 auto; }
-		h1 { font-size: clamp(3.5rem, 18vw, 5rem); }
-		.timeline { grid-template-columns: 2.25rem minmax(0, 1fr); gap: .65rem; padding-top: 3rem; }
-		.scroll-marker { width: .65rem; }
-		.holiday { scroll-margin-top: 126px; }
-		.holiday-card { grid-template-columns: 1fr; gap: .85rem; padding: 1.15rem; }
-		.holiday-meta, .territories { justify-content: flex-start; }
-		.help-tooltip { right: auto; left: 0; }
-	}
+  @media (max-width: 580px) {
+    .masthead {
+      display: block;
+    }
+    .brand {
+      margin-bottom: 0.85rem;
+    }
+    .filters {
+      justify-content: flex-start;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 0.15rem;
+      scrollbar-width: none;
+    }
+    .filter {
+      flex: 0 0 auto;
+      font-size: 0.68rem;
+    }
+    main {
+      width: min(100% - 1.5rem, 1120px);
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: clamp(3.5rem, 18vw, 5rem);
+    }
+    .timeline {
+      grid-template-columns: 2.25rem minmax(0, 1fr);
+      gap: 0.65rem;
+      padding-top: 3rem;
+    }
+    .scroll-marker {
+      width: 0.65rem;
+    }
+    .holiday {
+      scroll-margin-top: 126px;
+    }
+    .holiday-card {
+      grid-template-columns: 1fr;
+      gap: 0.85rem;
+      padding: 1.15rem;
+    }
+    .holiday-meta,
+    .territories {
+      justify-content: flex-start;
+    }
+    .help-tooltip {
+      right: auto;
+      left: 0;
+    }
+  }
 
-	@media (prefers-reduced-motion: reduce) {
-		* { scroll-behavior: auto !important; }
-	}
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      scroll-behavior: auto !important;
+    }
+  }
 </style>
