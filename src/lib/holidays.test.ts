@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildHolidays, type Proclamations } from "./holidays.ts";
+import { buildHolidays, type Proclamations, type Territory } from "./holidays.ts";
 
 const proclaimed: Proclamations = {
   "https://www.thegazette.co.uk/id/notice/first": {
@@ -26,6 +26,115 @@ const proclaimedNot: Proclamations = {
 };
 const holidays = buildHolidays(proclaimed, proclaimedNot);
 const holidayOn = (date: string) => holidays.find((holiday) => holiday.date === date);
+const holidaysForYear = (year: number) =>
+  buildHolidays(
+    {
+      first: { "England and Wales": [`${year}-01-01`] },
+      last: { "England and Wales": [`${year}-12-31`] },
+    },
+    {},
+  );
+const reasonForYearOn = (year: number, date: string, territory: Territory) =>
+  holidaysForYear(year).find((holiday) => holiday.date === date)?.reasonsByTerritory[territory];
+
+test("follows the England and Wales and Northern Ireland statutory schedules", () => {
+  const year = 2025;
+
+  assert.deepEqual(reasonForYearOn(year, "2025-04-21", "England and Wales"), [
+    "Easter Monday (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(year, "2025-04-21", "Northern Ireland"), [
+    "Easter Monday (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(year, "2025-05-26", "England and Wales"), [
+    "Last Monday in May (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(year, "2025-08-25", "Northern Ireland"), [
+    "Last Monday in August (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(year, "2025-12-26", "England and Wales"), [
+    "26 December (statutory bank holiday)",
+  ]);
+  assert.equal(reasonForYearOn(year, "2025-03-18", "Northern Ireland"), undefined);
+});
+
+test("follows the Scotland statutory schedule", () => {
+  const year = 2025;
+
+  assert.deepEqual(reasonForYearOn(year, "2025-01-01", "Scotland"), [
+    "New Year’s Day (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(year, "2025-01-02", "Scotland"), [
+    "2 January (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(year, "2025-04-18", "Scotland"), [
+    "Good Friday (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(year, "2025-05-05", "Scotland"), [
+    "First Monday in May (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(year, "2025-08-04", "Scotland"), [
+    "First Monday in August (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(year, "2025-12-01", "Scotland"), [
+    "St Andrew’s Day substitute (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(year, "2025-12-25", "Scotland"), [
+    "Christmas Day (statutory bank holiday)",
+  ]);
+  assert.equal(reasonForYearOn(year, "2025-12-26", "Scotland"), undefined);
+});
+
+test("applies Sunday and weekend substitution rules for every territory", () => {
+  assert.deepEqual(reasonForYearOn(2022, "2022-01-01", "Scotland"), [
+    "New Year’s Day (statutory bank holiday)",
+  ]);
+  assert.equal(reasonForYearOn(2022, "2022-01-02", "Scotland"), undefined);
+  assert.deepEqual(reasonForYearOn(2022, "2022-01-03", "Scotland"), [
+    "2 January substitute (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(2023, "2023-01-02", "Scotland"), [
+    "2 January (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(2023, "2023-01-03", "Scotland"), [
+    "New Year’s Day substitute (statutory bank holiday)",
+  ]);
+
+  assert.deepEqual(reasonForYearOn(2024, "2024-03-18", "Northern Ireland"), [
+    "St Patrick’s Day substitute (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(2024, "2024-12-02", "Scotland"), [
+    "St Andrew’s Day substitute (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(2021, "2021-12-27", "England and Wales"), [
+    "27 December substitute (statutory bank holiday)",
+  ]);
+  assert.deepEqual(reasonForYearOn(2021, "2021-12-27", "Northern Ireland"), [
+    "27 December substitute (statutory bank holiday)",
+  ]);
+  assert.equal(reasonForYearOn(2021, "2021-12-26", "England and Wales"), undefined);
+  assert.deepEqual(reasonForYearOn(2022, "2022-12-27", "England and Wales"), [
+    "27 December substitute (statutory bank holiday)",
+  ]);
+});
+
+test("exclusions remove statutory holidays without removing common law holidays", () => {
+  const holidaysWithExclusion = buildHolidays(
+    {
+      first: { "England and Wales": ["2025-01-01"] },
+      last: { "England and Wales": ["2025-12-31"] },
+    },
+    {
+      exclusion: { "England and Wales": ["2025-12-25"] },
+    },
+  );
+
+  const christmasReasons = holidaysWithExclusion.find(
+    (holiday) => holiday.date === "2025-12-25",
+  )?.reasonsByTerritory;
+
+  assert.deepEqual(christmasReasons?.["England and Wales"], ["Christmas Day (common law holiday)"]);
+});
 
 test("preserves every proclamation notice for its territory and date", () => {
   assert.deepEqual(holidayOn("2021-01-01")?.proclamationsByTerritory, {
