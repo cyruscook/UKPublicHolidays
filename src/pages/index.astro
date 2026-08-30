@@ -130,6 +130,10 @@ const formatDate = (date: string) =>
         </aside>
         <p class="empty" hidden>No holidays match this territory.</p>
         <ul class="holiday-list">
+          <li class="today-marker" hidden>
+            <span>Today</span>
+            <time class="today-marker-date"></time>
+          </li>
           {
             holidays.map((holiday) => (
               <li
@@ -216,12 +220,52 @@ const formatDate = (date: string) =>
       ];
       const marker = document.querySelector<HTMLElement>(".scroll-marker");
       const markerLabel = marker?.querySelector<HTMLElement>("span");
+      const todayMarker =
+        document.querySelector<HTMLElement>(".today-marker");
+      const todayMarkerDate =
+        todayMarker?.querySelector<HTMLTimeElement>(".today-marker-date");
       const empty = document.querySelector<HTMLElement>(".empty");
-      const today = new Date().toISOString().slice(0, 10);
+      const currentDate = new Date();
+      const today = [
+        currentDate.getFullYear(),
+        String(currentDate.getMonth() + 1).padStart(2, "0"),
+        String(currentDate.getDate()).padStart(2, "0"),
+      ].join("-");
       let markerFrame = 0;
 
       const visibleHolidays = () =>
         holidays.filter((holiday) => !holiday.hidden);
+
+      const positionTodayMarker = () => {
+        if (todayMarker) todayMarker.hidden = true;
+        const firstDate = holidays[0]?.dataset.date;
+        const lastDate = holidays.at(-1)?.dataset.date;
+        if (
+          !todayMarker ||
+          !todayMarkerDate ||
+          !visibleHolidays().length ||
+          !firstDate ||
+          !lastDate ||
+          today < firstDate ||
+          today > lastDate
+        )
+          return;
+
+        const nextHoliday = holidays.find(
+          (holiday) => (holiday.dataset.date ?? "") >= today,
+        );
+        if (!nextHoliday) return;
+
+        todayMarkerDate.dateTime = today;
+        todayMarkerDate.textContent = new Intl.DateTimeFormat("en-GB", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }).format(currentDate);
+        nextHoliday.before(todayMarker);
+        todayMarker.hidden = false;
+      };
 
       const updateMarker = () => {
         markerFrame = 0;
@@ -290,6 +334,7 @@ const formatDate = (date: string) =>
             territory !== "all" &&
             !(holiday.dataset.territories ?? "").split("|").includes(territory);
         });
+        positionTodayMarker();
         layoutOverview(territory);
         if (empty) empty.hidden = holidays.some((holiday) => !holiday.hidden);
         history.replaceState(
@@ -321,6 +366,7 @@ const formatDate = (date: string) =>
       addEventListener("scroll", queueMarkerUpdate, { passive: true });
       addEventListener("resize", queueMarkerUpdate);
 
+      positionTodayMarker();
       const requestedTerritory = decodeURIComponent(location.hash.slice(1));
       const initialTerritory = buttons.some(
         (button) => button.dataset.territory === requestedTerritory,
@@ -486,6 +532,47 @@ const formatDate = (date: string) =>
     padding: 0;
     overflow-anchor: none;
     list-style: none;
+  }
+  .today-marker {
+    position: relative;
+    display: flex;
+    min-height: 2.25rem;
+    align-items: center;
+    gap: 0.55rem;
+    margin: -0.15rem 0 0.85rem;
+    color: var(--green);
+  }
+  .today-marker[hidden] {
+    display: none;
+  }
+  .today-marker::before {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: rgba(39, 93, 67, 0.35);
+    content: "";
+  }
+  .today-marker span,
+  .today-marker time {
+    position: relative;
+    background: var(--card);
+  }
+  .today-marker span {
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--green);
+    border-radius: 2px;
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .today-marker time {
+    padding-right: 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
   }
   .holiday {
     position: relative;
