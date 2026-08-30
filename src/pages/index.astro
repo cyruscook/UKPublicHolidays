@@ -241,6 +241,9 @@ const formatDate = (date: string) =>
         ...document.querySelectorAll<HTMLButtonElement>(".filter"),
       ];
       const holidays = [...document.querySelectorAll<HTMLElement>(".holiday")];
+      const territoryLabels = [
+        ...document.querySelectorAll<HTMLElement>(".territories"),
+      ];
       const overviewDates = [
         ...document.querySelectorAll<HTMLButtonElement>(".overview-date"),
       ];
@@ -359,6 +362,9 @@ const formatDate = (date: string) =>
           holiday.hidden =
             territory !== "all" &&
             !(holiday.dataset.territories ?? "").split("|").includes(territory);
+        });
+        territoryLabels.forEach((labels) => {
+          labels.hidden = territory !== "all";
         });
         positionTodayMarker();
         layoutOverview(territory);
@@ -638,6 +644,9 @@ const formatDate = (date: string) =>
     justify-content: flex-end;
     gap: 0.35rem;
     max-width: none;
+  }
+  .territories[hidden] {
+    display: none;
   }
   .territory {
     display: inline-flex;
