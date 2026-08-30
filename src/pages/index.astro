@@ -8,6 +8,8 @@ import {
 
 const PROCLAIMED_URL =
   "https://d7rpp5pzwp0ap.cloudfront.net/proclaimed_bhs.json";
+const STATUTORY_BANK_HOLIDAY_URL =
+  "https://www.legislation.gov.uk/ukpga/1971/80/schedule/1";
 const base = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/`;
 const PROCLAIMED_NOT_URL =
   "https://d7rpp5pzwp0ap.cloudfront.net/proclaimed_not_bhs.json";
@@ -176,8 +178,32 @@ const formatDate = (date: string) =>
                           <span class="help-reason">
                             <strong>{shortNames[territory]}</strong>
                             <span>
-                              {holiday.reasonsByTerritory[territory]?.join(
-                                "; ",
+                              {holiday.reasonsByTerritory[territory]?.map(
+                                (reason, index) => {
+                                  const suffix = " (statutory bank holiday)";
+                                  const isStatutory = reason.endsWith(suffix);
+                                  return (
+                                    <span>
+                                      {index > 0 ? "; " : null}
+                                      {isStatutory
+                                        ? reason.slice(0, -suffix.length)
+                                        : reason}
+                                      {isStatutory ? (
+                                        <>
+                                          {" ("}
+                                          <a
+                                            href={STATUTORY_BANK_HOLIDAY_URL}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                          >
+                                            statutory bank holiday
+                                          </a>
+                                          {")"}
+                                        </>
+                                      ) : null}
+                                    </span>
+                                  );
+                                },
                               )}
                             </span>
                             {holiday.proclamationsByTerritory[territory]
